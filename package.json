@@ -1,6 +1,6 @@
 {
   "name": "@shaharia-lab/ai-limit-checker",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Check LLM provider rate limits (Claude, Gemini, z.ai) - CLI tool and library for monitoring API usage",
   "type": "module",
   "main": "./dist/index.js",
