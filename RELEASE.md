@@ -6,9 +6,10 @@ This document describes how to create a new release and publish to npm.
 
 Before creating a release, ensure:
 
-1. **GitHub Secrets are configured**:
-   - `NPM_TOKEN` - Your npm authentication token
-   - `NPM_USERNAME` - Your npm username (optional, for reference)
+1. **Trusted Publishing is configured on npmjs.com**:
+   - See [TRUSTED_PUBLISHING_SETUP.md](./TRUSTED_PUBLISHING_SETUP.md) for detailed setup instructions
+   - This uses OIDC authentication instead of long-lived tokens (more secure!)
+   - No secrets needed in GitHub repository
 
 2. **All changes are committed and pushed** to the `main` branch
 
@@ -94,8 +95,9 @@ Once you publish a release on GitHub, the automated workflow will:
    - Check that type definitions exist
 6. ✅ **Test the CLI executable** to ensure it runs
 7. ✅ **Update package.json version** to match the release tag
-8. ✅ **Publish to npm** using `NPM_TOKEN`
-9. ✅ **Create GitHub deployment** for tracking
+8. ✅ **Publish to npm** using OIDC Trusted Publishing (secure, no tokens!)
+9. ✅ **Generate provenance attestations** automatically
+10. ✅ **Create GitHub deployment** for tracking
 
 ## Monitoring the Release
 
@@ -165,9 +167,12 @@ Common issues:
    - Ensure all dependencies are listed in package.json
 
 2. **npm publish fails**:
-   - Verify `NPM_TOKEN` secret is set correctly
+   - Verify trusted publishing is configured correctly on npmjs.com
+   - Check workflow filename matches exactly: `release.yml`
+   - Ensure `id-token: write` permission is set in workflow
    - Check if version already exists on npm
    - Ensure you have publish permissions for `@shaharia-lab` scope
+   - See [TRUSTED_PUBLISHING_SETUP.md](./TRUSTED_PUBLISHING_SETUP.md) for troubleshooting
 
 3. **Version conflict**:
    - The version in the release tag must not already exist on npm
