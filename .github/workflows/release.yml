@@ -30,10 +30,11 @@ jobs:
           NPM_VERSION=$(npm --version)
           echo "npm version: $NPM_VERSION"
           # npm CLI version 11.5.1 or later is required for OIDC
-          if [ "$(printf '%s\n' "11.5.1" "$NPM_VERSION" | sort -V | head -n1)" != "11.5.1" ]; then
-            echo "✅ npm version $NPM_VERSION supports OIDC"
+          MIN_VERSION="11.5.1"
+          if [ "$(printf '%s\n' "$MIN_VERSION" "$NPM_VERSION" | sort -V | tail -n1)" = "$NPM_VERSION" ]; then
+            echo "✅ npm version $NPM_VERSION supports OIDC (requires $MIN_VERSION+)"
           else
-            echo "❌ npm version $NPM_VERSION does not support OIDC (requires 11.5.1+)"
+            echo "❌ npm version $NPM_VERSION does not support OIDC (requires $MIN_VERSION+)"
             exit 1
           fi
 
