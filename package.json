@@ -1,0 +1,63 @@
+{
+  "name": "@shaharia-lab/ai-limit-checker",
+  "version": "1.0.0",
+  "description": "Check LLM provider rate limits (Claude, Gemini, z.ai) - CLI tool and library for monitoring API usage",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ai-limit-checker": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --loader ts-node/esm src/cli.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "llm",
+    "rate-limit",
+    "rate-limiting",
+    "claude",
+    "claude-cli",
+    "gemini",
+    "gemini-cli",
+    "zai",
+    "z.ai",
+    "ai",
+    "limit-checker",
+    "api-monitoring",
+    "usage-monitoring",
+    "openai-alternative",
+    "anthropic",
+    "google-ai",
+    "cli-tool",
+    "typescript"
+  ],
+  "author": "Shaharia Lab <hello@shaharia.com> (https://github.com/shaharia-lab)",
+  "license": "MIT",
+  "homepage": "https://github.com/shaharia-lab/ai-limit-checker#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaharia-lab/ai-limit-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shaharia-lab/ai-limit-checker/issues"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "node-pty": "^1.1.0",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
