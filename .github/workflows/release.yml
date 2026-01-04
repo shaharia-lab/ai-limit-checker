@@ -20,8 +20,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
+          node-version: '24'
           cache: 'npm'
+
+      - name: Verify npm version for OIDC
+        run: |
+          echo "📋 Checking npm version..."
+          NPM_VERSION=$(npm --version)
+          echo "npm version: $NPM_VERSION"
+          # npm CLI version 11.5.1 or later is required for OIDC
+          if [ "$(printf '%s\n' "11.5.1" "$NPM_VERSION" | sort -V | head -n1)" != "11.5.1" ]; then
+            echo "✅ npm version $NPM_VERSION supports OIDC"
+          else
+            echo "❌ npm version $NPM_VERSION does not support OIDC (requires 11.5.1+)"
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
@@ -53,7 +66,14 @@ jobs:
           npm version $VERSION --no-git-tag-version
 
       - name: Publish to npm (with provenance)
-        run: npm publish --access public
+        run: |
+          echo "📦 Publishing to npm..."
+          echo "npm config registry: $(npm config get registry)"
+          echo "NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN:+(set)}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL: ${ACTIONS_ID_TOKEN_REQUEST_URL:+(set)}"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${ACTIONS_ID_TOKEN_REQUEST_TOKEN:+(set)}"
+          npm publish --access public
+          echo "✅ Published successfully"
 
       - name: Verify npm publication
         run: |
