@@ -50,11 +50,13 @@ npm install @shaharia-lab/ai-limit-checker
 
 ## Quick Start
 
-After installing globally, simply run:
+After installing globally, run with the `--tools` flag to specify which providers to check:
 
 ```bash
-ai-limit-checker
+ai-limit-checker --tools=claude,gemini,zai
 ```
+
+The `--tools` flag is **required** and accepts comma-separated provider names.
 
 **Example Output:**
 
@@ -108,9 +110,31 @@ ai-limit-checker
 
 #### Basic Command
 
+The `--tools` flag is **required** and specifies which providers to check.
+
 ```bash
-ai-limit-checker
+# Check all providers
+ai-limit-checker --tools=claude,gemini,zai
+
+# Check only Claude
+ai-limit-checker --tools=claude
+
+# Check Claude and Gemini
+ai-limit-checker --tools=claude,gemini
+
+# Check only z.ai
+ai-limit-checker --tools=zai
 ```
+
+#### Skip Behavior
+
+The tool will automatically skip providers that are not available on your system and display a warning message:
+
+- **Claude**: Skipped if the `claude` CLI is not installed
+- **Gemini**: Skipped if the `gemini` CLI is not installed
+- **z.ai**: Skipped if Chrome environment variables (`CHROME_OUTPUT_DIR`, `CHROME_USER_DATA_DIR`) are not set
+
+Skipped providers will return `status: "available"` with `resetAtHuman: "Unknown (skipped)"`.
 
 #### Integration with Shell Scripts
 
@@ -118,7 +142,7 @@ ai-limit-checker
 #!/bin/bash
 
 # Check if any provider is rate limited
-result=$(ai-limit-checker)
+result=$(ai-limit-checker --tools=claude,gemini,zai)
 if echo "$result" | grep -q "rate_limit_exceed"; then
     echo "Warning: One or more providers are rate limited!"
     echo "$result" | jq '.[] | select(.status=="rate_limit_exceed")'
@@ -133,7 +157,7 @@ echo "All providers available"
 Add to your crontab to check limits every hour:
 
 ```bash
-0 * * * * /usr/local/bin/ai-limit-checker >> /var/log/llm-limits.log 2>&1
+0 * * * * /usr/local/bin/ai-limit-checker --tools=claude,gemini,zai >> /var/log/llm-limits.log 2>&1
 ```
 
 ### Library Usage
@@ -145,7 +169,11 @@ import { checkLimits } from '@shaharia-lab/ai-limit-checker';
 
 async function main() {
   try {
-    const limits = await checkLimits();
+    // Check specific providers
+    const limits = await checkLimits(['claude', 'gemini', 'zai']);
+
+    // Or check all providers (no arguments)
+    // const limits = await checkLimits();
 
     for (const limit of limits) {
       console.log(`${limit.provider}: ${limit.status}`);
@@ -377,17 +405,26 @@ import { checkLimits } from '@shaharia-lab/ai-limit-checker';
 
 ### `checkLimits()`
 
-Main function that checks all provider limits.
+Main function that checks provider limits.
 
 ```typescript
-function checkLimits(): Promise<LlmLimitStatus[]>
+function checkLimits(tools?: ProviderName[]): Promise<LlmLimitStatus[]>
+
+type ProviderName = 'claude' | 'gemini' | 'zai';
 ```
 
-**Returns**: Promise that resolves to an array of status objects for all providers.
+**Parameters**:
+- `tools` (optional): Array of provider names to check. If not provided, checks all providers.
 
-**Example**:
+**Returns**: Promise that resolves to an array of status objects for the specified providers.
+
+**Examples**:
 ```typescript
-const limits = await checkLimits();
+// Check specific providers
+const limits = await checkLimits(['claude', 'gemini']);
+
+// Check all providers
+const allLimits = await checkLimits();
 ```
 
 ### `ClaudeClient`
@@ -469,7 +506,7 @@ jobs:
 
       - name: Check Limits
         run: |
-          ai-limit-checker > limits.json
+          ai-limit-checker --tools=claude,gemini,zai > limits.json
           cat limits.json
 
       - name: Alert on Rate Limit
@@ -609,17 +646,21 @@ npm run build
 
 ```bash
 # After linking
-ai-limit-checker
+ai-limit-checker --tools=claude,gemini
 
 # Or run directly
-node dist/cli.js
+node dist/cli.js --tools=claude
 ```
 
 ## FAQ
 
 ### Q: Do I need accounts for all providers?
 
-**A**: No. The tool will gracefully handle missing providers and return status information only for those you have configured.
+**A**: No. The tool will gracefully skip providers that are not available on your system and display a warning message. Skipped providers return `available` status with `resetAtHuman: "Unknown (skipped)"`.
+
+### Q: What is the `--tools` flag?
+
+**A**: The `--tools` flag is required and specifies which providers to check. It accepts comma-separated provider names (e.g., `--tools=claude,gemini,zai`). This allows you to check only the providers you're interested in.
 
 ### Q: How often should I check limits?
 
