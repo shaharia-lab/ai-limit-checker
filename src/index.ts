@@ -2,12 +2,32 @@
  * AI Limit Checker - Check LLM provider rate limits
  */
 
+import which from 'which';
 import { loadChromeConfig } from './config/env.js';
 import { ZaiClient } from './zai/client.js';
 import { GeminiClient } from './gemini/client.js';
 import { ClaudeClient } from './claude/client.js';
 import type { GeminiModelUsage } from './gemini/types.js';
 import type { ClaudeStatusInfo } from './claude/types.js';
+
+type ProviderName = 'claude' | 'gemini' | 'zai';
+
+function printWarning(message: string): void {
+  console.error(`Warning: ${message}`);
+}
+
+function isCommandAvailable(command: string): boolean {
+  try {
+    which.sync(command);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isChromeConfigAvailable(): boolean {
+  return !!(process.env.CHROME_OUTPUT_DIR && process.env.CHROME_USER_DATA_DIR);
+}
 
 export interface LlmLimitStatus {
   provider: string;
@@ -59,12 +79,13 @@ function parseGeminiResetTime(resetStr: string): number {
 async function getZaiStatus(): Promise<LlmLimitStatus> {
   try {
     // Check if Chrome environment is set up
-    if (!process.env.CHROME_OUTPUT_DIR || !process.env.CHROME_USER_DATA_DIR) {
+    if (!isChromeConfigAvailable()) {
+      printWarning('Skipping zai: Chrome environment variables (CHROME_OUTPUT_DIR, CHROME_USER_DATA_DIR) are not set');
       return {
         provider: 'zai',
         status: 'available',
         resetAt: 0,
-        resetAtHuman: 'Unknown',
+        resetAtHuman: 'Unknown (skipped)',
       };
     }
 
@@ -91,7 +112,8 @@ async function getZaiStatus(): Promise<LlmLimitStatus> {
       resetAt: 0,
       resetAtHuman: 'Unknown',
     };
-  } catch {
+  } catch (error) {
+    printWarning(`zai check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return {
       provider: 'zai',
       status: 'available',
@@ -103,6 +125,17 @@ async function getZaiStatus(): Promise<LlmLimitStatus> {
 
 async function getGeminiStatus(): Promise<LlmLimitStatus> {
   try {
+    // Check if gemini CLI is available
+    if (!isCommandAvailable('gemini')) {
+      printWarning('Skipping gemini: CLI is not available on this system');
+      return {
+        provider: 'gemini',
+        status: 'available',
+        resetAt: 0,
+        resetAtHuman: 'Unknown (skipped)',
+      };
+    }
+
     const client = new GeminiClient();
     const usage = await client.getUsageStats();
 
@@ -124,7 +157,8 @@ async function getGeminiStatus(): Promise<LlmLimitStatus> {
       resetAt: earliestReset === Infinity ? 0 : earliestReset,
       resetAtHuman: earliestReset === Infinity ? 'Unknown' : new Date(earliestReset).toISOString(),
     };
-  } catch {
+  } catch (error) {
+    printWarning(`gemini check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return {
       provider: 'gemini',
       status: 'available',
@@ -136,6 +170,17 @@ async function getGeminiStatus(): Promise<LlmLimitStatus> {
 
 async function getClaudeStatus(): Promise<LlmLimitStatus> {
   try {
+    // Check if claude CLI is available
+    if (!isCommandAvailable('claude')) {
+      printWarning('Skipping claude: CLI is not available on this system');
+      return {
+        provider: 'claude',
+        status: 'available',
+        resetAt: 0,
+        resetAtHuman: 'Unknown (skipped)',
+      };
+    }
+
     const client = new ClaudeClient();
     const status = await client.getUsageStats();
 
@@ -173,7 +218,8 @@ async function getClaudeStatus(): Promise<LlmLimitStatus> {
       resetAt: resetTime,
       resetAtHuman: resetTime > 0 ? new Date(resetTime).toISOString() : status.sessionResetTime,
     };
-  } catch {
+  } catch (error) {
+    printWarning(`claude check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     return {
       provider: 'claude',
       status: 'available',
@@ -184,16 +230,32 @@ async function getClaudeStatus(): Promise<LlmLimitStatus> {
 }
 
 /**
- * Check all LLM provider rate limits
+ * Check LLM provider rate limits
+ * @param tools - Optional array of provider names to check. If not provided, checks all providers.
+ *                Valid values: 'claude', 'gemini', 'zai'
  * @returns Array of limit status for each provider
  */
-export async function checkLimits(): Promise<LlmLimitStatus[]> {
-  const results = await Promise.all([
-    getClaudeStatus(),
-    getGeminiStatus(),
-    getZaiStatus(),
-  ]);
+export async function checkLimits(tools?: ProviderName[]): Promise<LlmLimitStatus[]> {
+  // If no tools specified, check all
+  const providersToCheck = tools && tools.length > 0 ? tools : ['claude', 'gemini', 'zai'];
 
+  const promises: Promise<LlmLimitStatus>[] = [];
+
+  for (const provider of providersToCheck) {
+    switch (provider) {
+      case 'claude':
+        promises.push(getClaudeStatus());
+        break;
+      case 'gemini':
+        promises.push(getGeminiStatus());
+        break;
+      case 'zai':
+        promises.push(getZaiStatus());
+        break;
+    }
+  }
+
+  const results = await Promise.all(promises);
   return results;
 }
 
